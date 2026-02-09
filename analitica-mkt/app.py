@@ -51,8 +51,28 @@ if st.button("🚀 ANALIZAR AHORA", type="primary"):
         st.error("⚠️ Por favor pega los datos del historial primero.")
     else:
         try:
-            # Magia: Convertir texto tabulado de Excel a DataFrame
-            df = pd.read_csv(io.StringIO(texto_pegado), sep='\t', header=None)
+            # --- CAMBIO AQUÍ ---
+            # sep=r'\s+' le dice a Python: "Si hay un espacio, tab o salto, separa ahí".
+            # engine='python' lo hace más robusto para detectar filas irregulares.
+            df = pd.read_csv(io.StringIO(texto_pegado), sep=r'\s+', header=None, engine='python')
+            
+            # Validación de seguridad:
+            # A veces copia columnas vacías al final. Nos quedamos solo con las 5 primeras.
+            if df.shape[1] < 5:
+                st.error(f"⚠️ Error de formato: Solo detecté {df.shape[1]} columnas. Necesito 5 (Alcance, Likes, Guardados, Compartidos, Comentarios). Intenta copiar de nuevo.")
+                st.stop()
+                
+            df = df.iloc[:, :5] # Cortar columnas extra si las hubiera
+            df.columns = ['Alcance', 'Likes', 'Guardados', 'Compartidos', 'Comentarios']
+            
+            # Limpieza extra: Asegurar que todo sean números (borrar comas de miles si las hubiera)
+            for col in df.columns:
+                if df[col].dtype == object:
+                    df[col] = df[col].astype(str).str.replace(',', '').str.replace('.', '')
+                    df[col] = pd.to_numeric(df[col])
+
+            # ... resto del código de cálculo ...
+            
             
             # Asignar nombres a las columnas automáticamente
             # Si pegó más columnas, cortamos a las primeras 5
@@ -91,3 +111,4 @@ if st.button("🚀 ANALIZAR AHORA", type="primary"):
 
         except Exception as e:
             st.error(f"Error al leer los datos. Asegúrate de copiar solo números. Detalle: {e}")
+
